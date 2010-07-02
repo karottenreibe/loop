@@ -2,9 +2,9 @@ Grammar (case insensitive):
 
 <expression> := <expression> ; <expression> | <assignment> | <loop>
 <assignment> := <identifier> = <value>
-<value> := <number> | <term> | <parens>
+<value> := <value> + <term> | <value> - <term> | <term>
+<term> := <number> | <parens>
 <parens> := (<value>)
-<term> := <value> + <value> | <value> - <value>
 <number> := [0-9]+
 <loop> := loop <value> do <expression> end
 <identifier> := [a-z][a-z0-9]*

@@ -12,7 +12,6 @@
 
 using namespace llvm;
 
-// <expression> := <expression> ; <expression> | <assignment> | <loop>
 struct ExprAST {
     virtual ~ExprAST() {}
 };
@@ -30,25 +29,36 @@ struct IdentifierAST : public ExprAST {
 };
 
 // <term> := <value> + <value> | <value> - <value>
-struct TermAST : public ExprAST {
-    BinaryOperator op;
-    ExprAST lhs;
-    ExprAST rhs;
-    TermAST(ExprAST l, BinaryOperator o, ExprAST r) : op(o), lhs(l), rhs(r) {}
+struct ValueAST : public ExprAST {
+    char op;
+    ExprAST* lhs;
+    ExprAST* rhs;
+    ValueAST(ExprAST* l, char o, ExprAST* r) : op(o), lhs(l), rhs(r) {}
+    virtual ~ValueAST() { delete lhs; delete rhs; }
 };
 
 // <loop> := loop <value> do <expression> end
 struct LoopAST : public ExprAST {
-    ExprAST argument;
-    ExprAST body;
-    LoopAST(ExprAST arg, ExprAST b) : argument(arg), body(b) {}
+    ExprAST* argument;
+    ExprAST* body;
+    LoopAST(ExprAST* arg, ExprAST* b) : argument(arg), body(b) {}
+    virtual ~LoopAST() { delete argument; delete body; }
 };
 
 // <assignment> := <identifier> = <value>
 struct AssignAST : public ExprAST {
-    IdentifierAST identifier;
-    ExprAST value;
-    AssignAST(IdentifierAST ident, ExprAST val) : identifier(ident), value(val) {}
+    ExprAST* identifier;
+    ExprAST* value;
+    AssignAST(ExprAST* ident, ExprAST* val) : identifier(ident), value(val) {}
+    virtual ~AssignAST() { delete value; }
+};
+
+// <expression> := <expression> ; <expression>
+struct SequenceAST : public ExprAST {
+    ExprAST* lhs;
+    ExprAST* rhs;
+    SequenceAST(ExprAST* l, ExprAST* r) : lhs(l), rhs(r) {}
+    virtual ~SequenceAST() { delete lhs; delete rhs; }
 };
 
 struct Parser {
@@ -62,7 +72,7 @@ struct Parser {
     Token eat() {
         Token buf = token;
         token = lexer.next_token();
-        return buf
+        return buf;
     }
 
     ExprAST* error(const char * expected) {
@@ -71,10 +81,27 @@ struct Parser {
     }
 
     // <expression> := <expression> ; <expression> | <assignment> | <loop>
+    ExprAST* parseExpression() {
+        ExprAST* lhs;
+        if (token.type == tok_loop) {
+            lhs = parseLoop();
+        } else if (token.type == tok_ident) {
+            lhs = parseAssignment();
+        } else if (token.type == tok_eof) {
+        } else {
+            lhs = error("expression");
+        }
+        if (token.type == tok_sep) {
+            ExprAST* rhs = parseExpression();
+            return new SequenceAST(lhs, rhs);
+        } else {
+            return lhs;
+        }
+    }
 
     // <assignment> := <identifier> = <value>
     ExprAST* parseAssignment() {
-        IdentifierAST ident = parseIdent();
+        ExprAST* ident = parseIdent();
         if (ident == NULL) {
             return NULL;
         } else {
@@ -91,15 +118,35 @@ struct Parser {
         }
     }
 
-    // <value> := <number> | <term> | <parens>
-    ExprAST* parseValue() {
-        // <parens>
-        if (token.type == tok_par_open) {
-            return parseParens();
-        } else if (token.type == tok_number) {
-            return parseNumber();
-        } else {
+    // <value> := <value> + <term> | <value> - <term> | <term>
+    ExprAST* parseValue(ExprAST* lhs = NULL) {
+        // <term>
+        if (lhs == NULL && token.type != tok_number) {
             return parseTerm();
+        // <value> +- <term>
+        } else {
+            if (lhs == NULL) {
+                lhs = parseTerm();
+            }
+            if (token.type != tok_plus && token.type != tok_minus) {
+                return error("operator");
+            } else {
+                char op;
+                if (token.type == tok_plus) {
+                    op = '+';
+                } else {
+                    op = '-';
+                }
+                eat();
+                ExprAST* rhs = parseTerm();
+                ValueAST* value = new ValueAST(lhs, op, rhs);
+                // upwards recursion
+                if (token.type == tok_plus || token.type == tok_minus) {
+                    return parseValue(value);
+                } else {
+                    return value;
+                }
+            }
         }
     }
 
@@ -118,14 +165,45 @@ struct Parser {
         }
     }
 
-    // <term> := <value> + <value> | <value> - <value>
+    // <term> := <number> | <parens>
+    ExprAST* parseTerm() {
+        if (token.type == tok_par_open) {
+            return parseParens();
+        } else {
+            return parseNumber();
+        }
+    }
 
     // <loop> := loop <value> do <expression> end
+    ExprAST* parseLoop() {
+        eat();
+        ExprAST* value = parseValue();
+        if (value == NULL) {
+            return NULL;
+        } else {
+            if (token.type != tok_do) {
+                return error("do");
+            } else {
+                eat();
+                ExprAST* expression = parseExpression();
+                if (expression == NULL) {
+                    return NULL;
+                } else {
+                    if (token.type != tok_end) {
+                        return error("end");
+                    } else {
+                        eat();
+                        return new LoopAST(value, expression);
+                    }
+                }
+            }
+        }
+    }
 
     // <number> := [0-9]+
     ExprAST* parseNumber() {
         Token number = eat();
-        return new NumberAST(indent.ibuffer);
+        return new NumberAST(number.ibuffer);
     }
 
     // <identifier> := [a-z][a-z0-9]*

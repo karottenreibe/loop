@@ -114,6 +114,16 @@ struct Lexer {
             }
             last_char = getchar();
         }
+        // fix keywords
+        if (token.type == tok_ident) {
+            if (token.cbuffer == "loop") {
+                token.type = tok_loop;
+            } else if (token.cbuffer == "do") {
+                token.type = tok_do;
+            } else if (token.cbuffer == "end") {
+                token.type = tok_end;
+            }
+        }
         return token;
     }
 };
