@@ -75,10 +75,13 @@ struct Parser {
         } else if (token.type == tok_ident) {
             lhs = parseAssignment();
         } else if (token.type == tok_eof) {
+            return lhs;
         } else {
             lhs = error("expression");
+            fprintf(stderr, "got: %i\n", token.type);
         }
         if (token.type == tok_sep) {
+            eat();
             ExprAST* rhs = parseExpression();
             return new SequenceAST(lhs, rhs);
         } else {
@@ -107,32 +110,26 @@ struct Parser {
 
     // <value> := <value> + <term> | <value> - <term> | <term>
     ExprAST* parseValue(ExprAST* lhs = NULL) {
-        // <term>
-        if (lhs == NULL && token.type != tok_number) {
-            return parseTerm();
-        // <value> +- <term>
+        if (lhs == NULL) {
+            lhs = parseTerm();
+        }
+        if (token.type != tok_plus && token.type != tok_minus) {
+            return lhs
         } else {
-            if (lhs == NULL) {
-                lhs = parseTerm();
-            }
-            if (token.type != tok_plus && token.type != tok_minus) {
-                return error("operator");
+            char op;
+            if (token.type == tok_plus) {
+                op = '+';
             } else {
-                char op;
-                if (token.type == tok_plus) {
-                    op = '+';
-                } else {
-                    op = '-';
-                }
-                eat();
-                ExprAST* rhs = parseTerm();
-                ValueAST* value = new ValueAST(lhs, op, rhs);
-                // upwards recursion
-                if (token.type == tok_plus || token.type == tok_minus) {
-                    return parseValue(value);
-                } else {
-                    return value;
-                }
+                op = '-';
+            }
+            eat();
+            ExprAST* rhs = parseTerm();
+            ValueAST* value = new ValueAST(lhs, op, rhs);
+            // upwards recursion
+            if (token.type == tok_plus || token.type == tok_minus) {
+                return parseValue(value);
+            } else {
+                return value;
             }
         }
     }
@@ -152,12 +149,16 @@ struct Parser {
         }
     }
 
-    // <term> := <number> | <parens>
+    // <term> := <number> | <identifier> | <parens>
     ExprAST* parseTerm() {
         if (token.type == tok_par_open) {
             return parseParens();
-        } else {
+        } else if (token.type == tok_number) {
             return parseNumber();
+        } else if (token.type == tok_ident) {
+            return parseIdent();
+        } else {
+            return error("term");
         }
     }
 

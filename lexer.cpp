@@ -44,6 +44,26 @@ struct Lexer {
             } else if (isdigit(last_char)) {
                 token.type = tok_number;
                 token.ibuffer = (token.ibuffer * 10) + last_char - 48;
+            // (
+            } else if (last_char == '(') {
+                // if something else has been read, we abort.
+                // otherwise we ignore
+                if (token.type != 0) {
+                    break;
+                }
+                token.type = tok_par_open;
+                last_char = getchar();
+                break;
+            // )
+            } else if (last_char == ')') {
+                // if something else has been read, we abort.
+                // otherwise we ignore
+                if (token.type != 0) {
+                    break;
+                }
+                token.type = tok_par_closed;
+                last_char = getchar();
+                break;
             // +
             } else if (last_char == '+') {
                 // if something else has been read, we abort.
