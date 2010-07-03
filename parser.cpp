@@ -1,27 +1,32 @@
+struct CodeGenerator;
 
 struct ExprAST {
     virtual ~ExprAST() {}
+    virtual Value* codegen(CodeGenerator* generator) = 0;
 };
 
 // <number> := [0-9]+
 struct NumberAST : public ExprAST {
     double value;
     NumberAST(double val) : value(val) {}
+    virtual Value* codegen(CodeGenerator* generator);
 };
 
 // <identifier> := [a-z][a-z0-9]*
 struct IdentifierAST : public ExprAST {
     std::string name;
     IdentifierAST(std::string nam) : name(nam) {}
+    virtual Value* codegen(CodeGenerator* generator);
 };
 
-// <term> := <value> + <value> | <value> - <value>
+// <value> := <value> + <term> | <value> - <term>
 struct ValueAST : public ExprAST {
     char op;
     ExprAST* lhs;
     ExprAST* rhs;
     ValueAST(ExprAST* l, char o, ExprAST* r) : op(o), lhs(l), rhs(r) {}
     virtual ~ValueAST() { delete lhs; delete rhs; }
+    virtual Value* codegen(CodeGenerator* generator);
 };
 
 // <loop> := loop <value> do <expression> end
@@ -30,6 +35,7 @@ struct LoopAST : public ExprAST {
     ExprAST* body;
     LoopAST(ExprAST* arg, ExprAST* b) : argument(arg), body(b) {}
     virtual ~LoopAST() { delete argument; delete body; }
+    virtual Value* codegen(CodeGenerator* generator);
 };
 
 // <assignment> := <identifier> = <value>
@@ -38,6 +44,7 @@ struct AssignAST : public ExprAST {
     ExprAST* value;
     AssignAST(ExprAST* ident, ExprAST* val) : identifier(ident), value(val) {}
     virtual ~AssignAST() { delete value; }
+    virtual Value* codegen(CodeGenerator* generator);
 };
 
 // <expression> := <expression> ; <expression>
@@ -46,7 +53,15 @@ struct SequenceAST : public ExprAST {
     ExprAST* rhs;
     SequenceAST(ExprAST* l, ExprAST* r) : lhs(l), rhs(r) {}
     virtual ~SequenceAST() { delete lhs; delete rhs; }
+    virtual Value* codegen(CodeGenerator* generator);
 };
+
+struct TopLevelAST : public ExprAST {
+    ExprAST* expression;
+    TopLevelAST(ExprAST* exp) : expression(exp) {}
+    virtual ~TopLevelAST() { delete expression; }
+    virtual Function* codegen(CodeGenerator* generator);
+}
 
 struct Parser {
     Token token;
@@ -62,7 +77,7 @@ struct Parser {
         return buf;
     }
 
-    ExprAST* error(const char * expected) {
+    ExprAST* error(const char* expected) {
         fprintf(stderr, "error: unexpected token. expected `%s'\n", expected);
         return NULL;
     }
