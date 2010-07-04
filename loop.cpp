@@ -23,13 +23,7 @@ struct CodeGenerator {
     IRBuilder<> builder;
     std::map<std::string, AllocaInst*> identifiers;
 
-    CodeGenerator() : builder(getGlobalContext()) {
-        this->module = new Module("module", getGlobalContext());
-    }
-
-    ~CodeGenerator() {
-        delete module;
-    }
+    CodeGenerator(Module* mod) : builder(getGlobalContext()), module(mod) {}
 
     Value* error(const char* msg) {
         fprintf(stderr, "%s\n", msg);
@@ -190,14 +184,59 @@ Function* TopLevelAST::codegen(CodeGenerator* generator) {
 // ===== main =================================================================
 
 int main(int argc, char ** argv) {
+    InitializeNativeTarget();
+    LLVMContext &context = getGlobalContext();
+
+    // Make the module, which holds all the code.
+    Module* module = new Module("LOOP JIT", context);
+
+    // Create the JIT.  This takes ownership of the module.
+    std::string error_message;
+    ExecutionEngine* execution_engine = EngineBuilder(module).setErrorStr(&error_message).create();
+    if (!execution_engine) {
+        fprintf(stderr, "Could not create ExecutionEngine: %s\n", error_message.c_str());
+        exit(1);
+    }
+
+    FunctionPassManager fpm(module);
+
+    // Set up the optimizer pipeline.  Start with registering info about how the
+    // target lays out data structures.
+    fpm.add(new TargetData(*execution_engine->getTargetData()));
+    // Promote allocas to registers.
+    fpm.add(createPromoteMemoryToRegisterPass());
+    // Do simple "peephole" optimizations and bit-twiddling optzns.
+    fpm.add(createInstructionCombiningPass());
+    // Reassociate expressions.
+    fpm.add(createReassociatePass());
+    // Eliminate Common SubExpressions.
+    fpm.add(createGVNPass());
+    // Simplify the control flow graph (deleting unreachable blocks, etc).
+    fpm.add(createCFGSimplificationPass());
+
+    fpm.doInitialization();
+
+    // Parse all input.
     Parser parser;
-    while (parser.token.type != tok_eof) {
-        ExprAST* expression = parser.parseExpression();
-        if (expression == NULL) {
-            parser.eat();
+    CodeGenerator generator(module);
+    while (!parser.eof()) {
+        fprintf(stderr, "ready> ");
+        TopLevelAST* toplevel = parser.parseToplevel();
+        if (toplevel != NULL) {
+            Function* fun = toplevel->codegen(&generator);
+            if (fun != NULL) {
+                void* compiled = execution_engine->getPointerToFunction(fun);
+                int (*compiled_cast)() = (int (*)())(intptr_t)compiled;
+                fprintf(stderr, "Evaluated to %i\n", compiled_cast());
+            }
         } else {
-            fprintf(stderr, "success!\n");
+            parser.eat();
         }
     }
+
+    // Print out all of the generated code.
+    module->dump();
+
+    return 0;
 }
 

@@ -57,6 +57,7 @@ struct SequenceAST : public ExprAST {
     virtual Value* codegen(CodeGenerator* generator);
 };
 
+// <toplevel> := ';' | <expression>
 struct TopLevelAST : public ExprAST {
     ExprAST* expression;
     TopLevelAST(ExprAST* exp) : expression(exp) {}
@@ -81,6 +82,25 @@ struct Parser {
     ExprAST* error(const char* expected) {
         fprintf(stderr, "error: unexpected token. expected `%s'\n", expected);
         return NULL;
+    }
+
+    bool eof() {
+        return token.type == tok_eof;
+    }
+
+    // <toplevel> := ';' | <expression>
+    TopLevelAST* parseToplevel() {
+        if (token.type == tok_sep) {
+            eat();
+            return NULL;
+        } else {
+            ExprAST* expression = parseExpression();
+            if (expression == NULL) {
+                return NULL;
+            } else {
+                return new TopLevelAST(expression);
+            }
+        }
     }
 
     // <expression> := <expression> ; <expression> | <assignment> | <loop>
