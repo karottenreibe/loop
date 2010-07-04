@@ -43,7 +43,7 @@ struct CodeGenerator {
 };
 
 Value* NumberAST::codegen(CodeGenerator* generator) {
-    return ConstantInt::get(getGlobalContext(), APInt(this->value));
+    return ConstantInt::get(getGlobalContext(), APInt(32, this->value));
 }
 
 Value* IdentifierAST::codegen(CodeGenerator* generator) {
@@ -64,43 +64,44 @@ Value* ValueAST::codegen(CodeGenerator* generator) {
         return NULL;
     }
     switch (this->op) {
-    case '+':
-        return generator->builder.CreateAdd(lhs_val, rhs_val);
-    case '-':
-        IRBuilder<> builder = generator->builder;
-        // calculate exact result (might be negative)
-        Value* exact = builder.CreateSub(lhs_val, rhs_val);
-        // create condition
-        Value* condition = builder.CreateICmpSLT(exact,
-            ConstantInt::get(getGlobalContext(), APInt(0)), "ifcond");
-        // create if/then/else blocks
-        Function* fun = builder.GetInsertBlock()->getParent();
-        BasicBlock* then_block = BasicBlock::Create(getGlobalContext(), "then", fun);
-        BasicBlock* else_block = BasicBlock::Create(getGlobalContext(), "else");
-        BasicBlock* merge_block = BasicBlock::Create(getGlobalContext(), "ifmerge");
-        // create conditional branch
-        builder.CreateCondBr(condition, then_block, else_block);
-        // fill in then block, i.e. normalize to 0
-        builder.SetInsertPoint(then_block);
-        Value* then_value = ConstantInt::get(getGlobalContext(), APInt(0));
-        builder.CreateBr(merge_block);
-        // fill in else block, i.e. return exact result
-        then_block = builder.GetInsertBlock();
-        fun->getBasicBlockList().push_back(else_block);
-        builder.SetInsertPoint(else_block);
-        builder.CreateBr(merge_block);
-        else_block = builder.GetInsertBlock();
-        // fill in merge block
-        fun->getBasicBlockList().push_back(merge_block);
-        builder.SetInsertPoint(merge_block);
-        PHINode* phi = builder.CreatePHI(Type::getInt32PtrTy(getGlobalContext()), "iftmp");
-        phi->addIncoming(then_value, then_block);
-        phi->addIncoming(exact, else_block);
-        return phi;
-    default:
-        std::string message = "unknown operator: ";
-        message += this->op;
-        return generator->error(message.c_str());
+        case '+': {
+            return generator->builder.CreateAdd(lhs_val, rhs_val);
+        } case '-': {
+            IRBuilder<> builder = generator->builder;
+            // calculate exact result (might be negative)
+            Value* exact = builder.CreateSub(lhs_val, rhs_val);
+            // create condition
+            Value* condition = builder.CreateICmpSLT(exact,
+                ConstantInt::get(getGlobalContext(), APInt(32, 0)), "ifcond");
+            // create if/then/else blocks
+            Function* fun = builder.GetInsertBlock()->getParent();
+            BasicBlock* then_block = BasicBlock::Create(getGlobalContext(), "then", fun);
+            BasicBlock* else_block = BasicBlock::Create(getGlobalContext(), "else");
+            BasicBlock* merge_block = BasicBlock::Create(getGlobalContext(), "ifmerge");
+            // create conditional branch
+            builder.CreateCondBr(condition, then_block, else_block);
+            // fill in then block, i.e. normalize to 0
+            builder.SetInsertPoint(then_block);
+            Value* then_value = ConstantInt::get(getGlobalContext(), APInt(32, 0));
+            builder.CreateBr(merge_block);
+            // fill in else block, i.e. return exact result
+            then_block = builder.GetInsertBlock();
+            fun->getBasicBlockList().push_back(else_block);
+            builder.SetInsertPoint(else_block);
+            builder.CreateBr(merge_block);
+            else_block = builder.GetInsertBlock();
+            // fill in merge block
+            fun->getBasicBlockList().push_back(merge_block);
+            builder.SetInsertPoint(merge_block);
+            PHINode* phi = builder.CreatePHI(Type::getInt32PtrTy(getGlobalContext()), "iftmp");
+            phi->addIncoming(then_value, then_block);
+            phi->addIncoming(exact, else_block);
+            return phi;
+        } default: {
+                std::string message = "unknown operator: ";
+                message += this->op;
+                return generator->error(message.c_str());
+        }
     }
 }
 
@@ -122,7 +123,7 @@ Value* LoopAST::codegen(CodeGenerator* generator) {
     PHINode* phi = builder.CreatePHI(Type::getInt32Ty(getGlobalContext()), "_loopvar");
     phi->addIncoming(start_counter, header_block);
     // add end condition
-    Value* condition = builder.CreateICmpEQ(phi, ConstantInt::get(getGlobalContext(), APInt(0)), "loopcond");
+    Value* condition = builder.CreateICmpEQ(phi, ConstantInt::get(getGlobalContext(), APInt(32, 0)), "loopcond");
     builder.CreateCondBr(condition, after_block, body_block);
     // fill loop with body
     fun->getBasicBlockList().push_back(body_block);
@@ -131,7 +132,7 @@ Value* LoopAST::codegen(CodeGenerator* generator) {
         return NULL;
     } else {
         // step down
-        Value* next_counter = builder.CreateSub(phi, ConstantInt::get(getGlobalContext(), APInt(1)));
+        Value* next_counter = builder.CreateSub(phi, ConstantInt::get(getGlobalContext(), APInt(32, 1)));
         builder.CreateBr(body_block);
         phi->addIncoming(next_counter, body_block);
         builder.CreateBr(condition_block);
@@ -156,6 +157,7 @@ Value* AssignAST::codegen(CodeGenerator* generator) {
         // overwrite variable
         generator->builder.CreateStore(rhs, variable);
     }
+    return rhs;
 }
 
 Value* SequenceAST::codegen(CodeGenerator* generator) {
