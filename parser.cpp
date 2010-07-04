@@ -1,3 +1,4 @@
+using namespace llvm;
 struct CodeGenerator;
 
 struct ExprAST {
@@ -7,8 +8,8 @@ struct ExprAST {
 
 // <number> := [0-9]+
 struct NumberAST : public ExprAST {
-    double value;
-    NumberAST(double val) : value(val) {}
+    int value;
+    NumberAST(int val) : value(val) {}
     virtual Value* codegen(CodeGenerator* generator);
 };
 
@@ -40,9 +41,9 @@ struct LoopAST : public ExprAST {
 
 // <assignment> := <identifier> = <value>
 struct AssignAST : public ExprAST {
-    ExprAST* identifier;
+    IdentifierAST* identifier;
     ExprAST* value;
-    AssignAST(ExprAST* ident, ExprAST* val) : identifier(ident), value(val) {}
+    AssignAST(IdentifierAST* ident, ExprAST* val) : identifier(ident), value(val) {}
     virtual ~AssignAST() { delete value; }
     virtual Value* codegen(CodeGenerator* generator);
 };
@@ -61,7 +62,7 @@ struct TopLevelAST : public ExprAST {
     TopLevelAST(ExprAST* exp) : expression(exp) {}
     virtual ~TopLevelAST() { delete expression; }
     virtual Function* codegen(CodeGenerator* generator);
-}
+};
 
 struct Parser {
     Token token;
@@ -106,7 +107,7 @@ struct Parser {
 
     // <assignment> := <identifier> = <value>
     ExprAST* parseAssignment() {
-        ExprAST* ident = parseIdent();
+        IdentifierAST* ident = parseIdent();
         if (ident == NULL) {
             return NULL;
         } else {
@@ -129,7 +130,7 @@ struct Parser {
             lhs = parseTerm();
         }
         if (token.type != tok_plus && token.type != tok_minus) {
-            return lhs
+            return lhs;
         } else {
             char op;
             if (token.type == tok_plus) {
@@ -171,7 +172,7 @@ struct Parser {
         } else if (token.type == tok_number) {
             return parseNumber();
         } else if (token.type == tok_ident) {
-            return parseIdent();
+            return (ExprAST*) parseIdent();
         } else {
             return error("term");
         }
@@ -210,7 +211,7 @@ struct Parser {
     }
 
     // <identifier> := [a-z][a-z0-9]*
-    ExprAST* parseIdent() {
+    IdentifierAST* parseIdent() {
         Token ident = eat();
         return new IdentifierAST(ident.cbuffer);
     }
