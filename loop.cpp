@@ -9,6 +9,7 @@
 #include "llvm/Target/TargetSelect.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Support/IRBuilder.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <string>
 #include <iostream>
@@ -71,8 +72,9 @@ int main(int argc, char ** argv) {
         fprintf(stderr, "ready> ");
     }
 
+    raw_stdout_ostream ostream;
     // Print out all of the generated code.
-    module->dump();
+    module->print(ostream, 0);
 
     return 0;
 }

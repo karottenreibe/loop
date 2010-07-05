@@ -148,7 +148,7 @@ Function* TopLevelAST::codegen(CodeGenerator* generator) {
     std::vector<const Type*> arguments(0);
     const Type* ret = Type::getInt32Ty(getGlobalContext());
     FunctionType* fun_type = FunctionType::get(ret, arguments, false);
-    Function* fun = Function::Create(fun_type, Function::ExternalLinkage, "", generator->module);
+    Function* fun = Function::Create(fun_type, Function::ExternalLinkage, "mainloop", generator->module);
     BasicBlock* entry = BasicBlock::Create(getGlobalContext(), "entry", fun);
     generator->builder.SetInsertPoint(entry);
     Value* body = this->expression->codegen(generator);
