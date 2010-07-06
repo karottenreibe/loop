@@ -2,7 +2,7 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32-n8:16:32"
 target triple = "i386-pc-linux-gnu"
 
-@.str = private constant [84 x i8] c"Expecting a single argument: a number, which will be assigned to the variable `n'.\0A\00" ; <[84 x i8]*> [#uses=1]
+@.str = private constant [119 x i8] c"This is a LOOP program.\0AIt expects a single argument: a positive integer, which will be assigned to the variable `n'.\0A\00" ; <[119 x i8]*> [#uses=1]
 @.str1 = private constant [35 x i8] c"Program for n=%i evaluated to: %i\0A\00" ; <[35 x i8]*> [#uses=1]
 
 define i32 @main(i32 %argc, i8** %argv) nounwind {
@@ -19,7 +19,7 @@ define i32 @main(i32 %argc, i8** %argv) nounwind {
   br i1 %5, label %6, label %8
 
 ; <label>:6                                       ; preds = %0
-  %7 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([84 x i8]* @.str, i32 0, i32 0)) ; <i32> [#uses=0]
+  %7 = call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([119 x i8]* @.str, i32 0, i32 0)) ; <i32> [#uses=0]
   store i32 1, i32* %1
   br label %18
 
