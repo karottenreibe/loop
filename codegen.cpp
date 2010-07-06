@@ -43,7 +43,7 @@ Value* ValueAST::codegen(CodeGenerator* generator) {
             case '+': {
                 return generator->builder.CreateAdd(lhs_val, rhs_val);
             } case '-': {
-                IRBuilder<> builder = generator->builder;
+                IRBuilder<>& builder = generator->builder;
                 // calculate exact result (might be negative)
                 Value* exact = builder.CreateSub(lhs_val, rhs_val);
                 // create condition
@@ -69,7 +69,7 @@ Value* ValueAST::codegen(CodeGenerator* generator) {
                 // fill in merge block
                 fun->getBasicBlockList().push_back(merge_block);
                 builder.SetInsertPoint(merge_block);
-                PHINode* phi = builder.CreatePHI(Type::getInt32PtrTy(getGlobalContext()), "iftmp");
+                PHINode* phi = builder.CreatePHI(Type::getInt32Ty(getGlobalContext()), "iftmp");
                 phi->addIncoming(then_value, then_block);
                 phi->addIncoming(exact, else_block);
                 return phi;
