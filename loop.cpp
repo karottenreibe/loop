@@ -12,6 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 #include <string>
+#include <fstream>
 #include <iostream>
 #include <map>
 #include "lexer.cpp"
@@ -54,27 +55,26 @@ int main(int argc, char ** argv) {
     fpm.doInitialization();
 
     // Parse all input.
-    fprintf(stderr, "ready> ");
     Parser parser;
     CodeGenerator generator(module, &fpm);
     while (!parser.eof()) {
         TopLevelAST* toplevel = parser.parseToplevel();
         if (toplevel != NULL) {
-            Function* fun = toplevel->codegen(&generator);
-            if (fun != NULL) {
-                void* compiled = execution_engine->getPointerToFunction(fun);
-                int (*compiled_cast)() = (int (*)())(intptr_t)compiled;
-                fprintf(stderr, "Evaluated to %i\n", compiled_cast());
-            }
+            toplevel->codegen(&generator);
         } else {
             parser.eat();
         }
-        fprintf(stderr, "ready> ");
     }
+
+    // print header
+    std::ifstream stream("header.s");
+    std::istreambuf_iterator<char> buffer(stream);
+    std::string header(buffer, std::istreambuf_iterator<char>());
+    std::cout << header << std::endl;
 
     raw_stdout_ostream ostream;
     // Print out all of the generated code.
-    module->print(ostream, 0);
+    module->print(ostream, NULL);
 
     return 0;
 }

@@ -145,20 +145,34 @@ Value* SequenceAST::codegen(CodeGenerator* generator) {
 }
 
 Function* TopLevelAST::codegen(CodeGenerator* generator) {
-    std::vector<const Type*> arguments(0);
+    // generate prototype
+    std::vector<const Type*> arguments(1, Type::getInt32Ty(getGlobalContext()));
     const Type* ret = Type::getInt32Ty(getGlobalContext());
     FunctionType* fun_type = FunctionType::get(ret, arguments, false);
     Function* fun = Function::Create(fun_type, Function::ExternalLinkage, "mainloop", generator->module);
+    // generate entry block
     BasicBlock* entry = BasicBlock::Create(getGlobalContext(), "entry", fun);
     generator->builder.SetInsertPoint(entry);
+    // add magic `n' and `f' identifiers
+    fun->arg_begin()->setName("n");
+    AllocaInst* n_alloca = generator->allocateIdentifier(fun, "n");
+    AllocaInst* f_alloca = generator->allocateIdentifier(fun, "f");
+    generator->builder.CreateStore(fun->arg_begin(), n_alloca);
+    generator->builder.CreateStore(ConstantInt::get(getGlobalContext(), APInt(32, 0)), f_alloca);
+    generator->identifiers["n"] = n_alloca;
+    generator->identifiers["f"] = f_alloca;
+    // generate body
     Value* body = this->expression->codegen(generator);
     if (body == NULL) {
         fun->eraseFromParent();
         return NULL;
     } else {
+        // generate exit block
         BasicBlock* exit = &fun->getBasicBlockList().back();
         generator->builder.SetInsertPoint(exit);
-        generator->builder.CreateRet(body);
+        Value* f = generator->builder.CreateLoad(generator->identifiers["f"], "f");
+        generator->builder.CreateRet(f);
+        // verify function and apply passes
         verifyFunction(*fun);
         generator->fpm->run(*fun);
         return fun;
