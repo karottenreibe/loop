@@ -1,18 +1,34 @@
 
 enum TokenType {
-    tok_eof = -1,
-    tok_loop = -2,
-    tok_do = -3,
-    tok_end = -4,
-    tok_number = -5,
-    tok_plus = -6,
-    tok_minus = -7,
-    tok_par_open = -8,
-    tok_par_closed = -9,
-    tok_assign = -10,
-    tok_ident = -11,
-    tok_sep = -12,
-    tok_invalid = -99,
+    tok_invalid = 0,
+    tok_eof = 1,
+    tok_loop = 2,
+    tok_do = 3,
+    tok_end = 4,
+    tok_number = 5,
+    tok_plus = 6,
+    tok_minus = 7,
+    tok_par_open = 8,
+    tok_par_closed = 9,
+    tok_assign = 10,
+    tok_ident = 11,
+    tok_sep = 12,
+};
+
+static const char* Tokens[] = {
+    "tok_invalid",
+    "tok_eof",
+    "tok_loop",
+    "tok_do",
+    "tok_end",
+    "tok_number",
+    "tok_plus",
+    "tok_minus",
+    "tok_par_open",
+    "tok_par_closed",
+    "tok_assign",
+    "tok_ident",
+    "tok_se",
 };
 
 struct Token {

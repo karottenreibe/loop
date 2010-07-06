@@ -26,14 +26,15 @@ int main(int argc, char ** argv) {
     LLVMContext &context = getGlobalContext();
 
     // Make the module, which holds all the code.
-    Module* module = new Module("LOOP JIT", context);
+    Module* module = new Module("LOOP program", context);
 
-    // Create the JIT.  This takes ownership of the module.
+    // Create the JIT.
     std::string error_message;
     ExecutionEngine* execution_engine = EngineBuilder(module).setErrorStr(&error_message).create();
     if (!execution_engine) {
-        fprintf(stderr, "Could not create ExecutionEngine: %s\n", error_message.c_str());
-        exit(1);
+        fprintf(stderr, "Fatal: Could not create ExecutionEngine: %s\n", error_message.c_str());
+        delete module;
+        return 1;
     }
 
     FunctionPassManager fpm(module);
@@ -57,25 +58,27 @@ int main(int argc, char ** argv) {
     // Parse all input.
     Parser parser;
     CodeGenerator generator(module, &fpm);
-    while (!parser.eof()) {
-        TopLevelAST* toplevel = parser.parseToplevel();
-        if (toplevel != NULL) {
-            toplevel->codegen(&generator);
-        } else {
-            parser.eat();
-        }
+    TopLevelAST* toplevel = parser.parseToplevel();
+    if (toplevel != NULL) {
+        Value* toplevel_value = toplevel->codegen(&generator);
+
+        // print header
+        std::ifstream stream("header.s");
+        std::istreambuf_iterator<char> buffer(stream);
+        std::string header(buffer, std::istreambuf_iterator<char>());
+        std::cout << header << std::endl;
+
+        // Print out all of the generated code.
+        raw_stdout_ostream ostream;
+        module->print(ostream, NULL);
+
+        delete toplevel;
+        delete execution_engine;
+        return 0;
+    } else {
+        delete toplevel;
+        delete execution_engine;
+        return 2;
     }
-
-    // print header
-    std::ifstream stream("header.s");
-    std::istreambuf_iterator<char> buffer(stream);
-    std::string header(buffer, std::istreambuf_iterator<char>());
-    std::cout << header << std::endl;
-
-    raw_stdout_ostream ostream;
-    // Print out all of the generated code.
-    module->print(ostream, NULL);
-
-    return 0;
 }
 

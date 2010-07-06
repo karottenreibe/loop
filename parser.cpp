@@ -44,7 +44,7 @@ struct AssignAST : public ExprAST {
     IdentifierAST* identifier;
     ExprAST* value;
     AssignAST(IdentifierAST* ident, ExprAST* val) : identifier(ident), value(val) {}
-    virtual ~AssignAST() { delete value; }
+    virtual ~AssignAST() { delete value; delete identifier; }
     virtual Value* codegen(CodeGenerator* generator);
 };
 
@@ -79,8 +79,13 @@ struct Parser {
         return buf;
     }
 
-    ExprAST* error(const char* expected) {
-        fprintf(stderr, "error: unexpected token. expected `%s'\n", expected);
+    ExprAST* error(const int got, const int expected) {
+        fprintf(stderr, "Error: Unexpected token `%s', expected `%s'.\n", Tokens[got], Tokens[expected]);
+        return NULL;
+    }
+
+    ExprAST* error(const int got, const char * expected) {
+        fprintf(stderr, "Error: Unexpected token %s, expected %s.\n", Tokens[got], expected);
         return NULL;
     }
 
@@ -113,8 +118,7 @@ struct Parser {
         } else if (token.type == tok_eof) {
             return lhs;
         } else {
-            lhs = error("expression");
-            fprintf(stderr, "got: %i\n", token.type);
+            lhs = error(token.type, "an expression");
         }
         if (token.type == tok_sep) {
             eat();
@@ -132,7 +136,7 @@ struct Parser {
             return NULL;
         } else {
             if (token.type != tok_assign) {
-                return error("=");
+                return error(token.type, tok_assign);
             }
             eat();
             ExprAST* value = parseValue();
@@ -178,7 +182,7 @@ struct Parser {
             return NULL;
         } else {
             if (token.type != tok_par_closed) {
-                return error(")");
+                return error(token.type, tok_par_closed);
             }
             eat();
             return body;
@@ -194,7 +198,7 @@ struct Parser {
         } else if (token.type == tok_ident) {
             return (ExprAST*) parseIdent();
         } else {
-            return error("term");
+            return error(token.type, "a term");
         }
     }
 
@@ -206,7 +210,7 @@ struct Parser {
             return NULL;
         } else {
             if (token.type != tok_do) {
-                return error("do");
+                return error(token.type, tok_do);
             } else {
                 eat();
                 ExprAST* expression = parseExpression();
@@ -214,7 +218,7 @@ struct Parser {
                     return NULL;
                 } else {
                     if (token.type != tok_end) {
-                        return error("end");
+                        return error(token.type, tok_end);
                     } else {
                         eat();
                         return new LoopAST(value, expression);

@@ -7,8 +7,8 @@ struct CodeGenerator {
     CodeGenerator(Module* mod, FunctionPassManager* fpman) :
         builder(getGlobalContext()), module(mod), fpm(fpman) {}
 
-    Value* error(const char* msg) {
-        fprintf(stderr, "%s\n", msg);
+    Value* error(const char* msg, const char * argument) {
+        fprintf(stderr, "Error: %s: %s\n", msg, argument);
         return NULL;
     }
 
@@ -25,9 +25,7 @@ Value* NumberAST::codegen(CodeGenerator* generator) {
 Value* IdentifierAST::codegen(CodeGenerator* generator) {
     Value* alloca = generator->identifiers[this->name];
     if (alloca == NULL) {
-        std::string message = "reference to undefined variable ";
-        message += this->name;
-        return generator->error(message.c_str());
+        return generator->error("Reference to undefined variable", this->name.c_str());
     } else {
         return generator->builder.CreateLoad(alloca, this->name.c_str());
     }
@@ -74,9 +72,8 @@ Value* ValueAST::codegen(CodeGenerator* generator) {
                 phi->addIncoming(exact, else_block);
                 return phi;
             } default: {
-                    std::string message = "unknown operator: ";
-                    message += this->op;
-                    return generator->error(message.c_str());
+                const char msg[2] = { this->op, '\0' };
+                return generator->error("Unknown operator", msg);
             }
         }
     }
