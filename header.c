@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int mainloop(int arg) {
-    return arg;
-}
+int mainloop(int);
 
 int main(int argc, char ** argv) {
     if (argc != 2) {
