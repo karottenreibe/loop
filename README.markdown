@@ -4,7 +4,7 @@
 
 # compile the compiler #
 
-    clang loop.cpp -O2 `llvm-config --cppflags --ldflags --libs core jit native` -o loop
+    clang++ loop.cpp -O2 `llvm-config --cppflags --ldflags --libs core jit native` -o loop
 
 # LOOP grammar #
 
