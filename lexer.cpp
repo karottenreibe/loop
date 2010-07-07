@@ -152,11 +152,13 @@ struct Lexer {
         }
         // fix keywords
         if (token.type == tok_ident) {
-            if (token.cbuffer == "loop") {
+            std::string buffer(token.cbuffer);
+            std::transform(buffer.begin(), buffer.end(), buffer.begin(), tolower);
+            if (buffer == "loop") {
                 token.type = tok_loop;
-            } else if (token.cbuffer == "do") {
+            } else if (buffer == "do") {
                 token.type = tok_do;
-            } else if (token.cbuffer == "end") {
+            } else if (buffer == "end") {
                 token.type = tok_end;
             }
         }

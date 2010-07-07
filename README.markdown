@@ -31,10 +31,5 @@
 
     ./prog 3
 
-# TODOs #
-
-* make grammar case insensitive
-
-
 [clang]: http://clang.llvm.org/ "clang -- the better C compiler"
 

@@ -11,6 +11,7 @@
 #include "llvm/Support/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
+#include <algorithm>
 #include <string>
 #include <fstream>
 #include <iostream>
